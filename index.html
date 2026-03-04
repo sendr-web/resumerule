@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Document Assistant - Chat & Summary</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    /* 隐藏水平滚动条 */
+    .scrollbar-hide::-webkit-scrollbar {
+      display: none;
+    }
+    .scrollbar-hide {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* 补充 Tailwind 动画插件缺失的底层关键帧，确保气泡弹出动画正常运行 */
+    @keyframes slideInUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-in {
+      animation: slideInUp ease-out forwards;
+    }
+    .duration-300 { animation-duration: 300ms; }
+    .duration-500 { animation-duration: 500ms; }
+    .delay-150 { animation-delay: 150ms; }
+    .fill-mode-both { animation-fill-mode: both; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@18.2.0",
+        "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+        "lucide-react": "https://esm.sh/lucide-react@0.292.0"
+      }
+    }
+  </script>
+
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel" data-type="module">
+    import React, { useState } from 'react';
+    import { createRoot } from 'react-dom/client';
+    import { 
+      Copy, ArrowUpToLine, Check, Sparkles, FileText, 
+      ChevronDown, Keyboard, Plus, Mic, ListTodo,
+      Wifi, Battery, Signal
+    } from 'lucide-react';
+
+    function App() {
+      const [copied, setCopied] = useState(false);
+      const [inserted, setInserted] = useState(false);
+      // 控制当前视图状态：'home' (默认欢迎页) 或 'chat' (对话与总结页)
+      const [view, setView] = useState('home');
+
+      const handleCopy = () => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      };
+
+      const handleInsert = () => {
+        setInserted(true);
+        setTimeout(() => setInserted(false), 2000);
+      };
+
+      const handleSummarizeClick = () => {
+        setView('chat');
+      };
+
+      const handleBackToHome = () => {
+        setView('home');
+        setCopied(false);
+        setInserted(false);
+      };
+
+      return (
+        <div className="min-h-screen bg-gray-900 flex items-center justify-center p-6 font-sans">
+          {/* 模拟移动端/侧边栏容器 (带手机壳视觉效果) */}
+          <div className="w-full max-w-[400px] h-[800px] bg-white rounded-[3rem] shadow-2xl overflow-hidden flex flex-col relative border-[8px] border-gray-800">
+            
+            {/* iOS 状态栏模拟 */}
+            <div className="flex justify-between items-center px-6 pt-3 pb-2 text-gray-900 z-20 bg-white">
+              <span className="text-sm font-semibold">9:41</span>
+              <div className="flex items-center space-x-1.5">
+                <Signal className="w-4 h-4" />
+                <Wifi className="w-4 h-4" />
+                <Battery className="w-5 h-5" />
+              </div>
+            </div>
+
+            {/* 顶部 Header */}
+            <div 
+              className="px-5 py-3 flex items-center justify-center bg-white z-10 cursor-pointer hover:bg-gray-50 transition-colors"
+              onClick={handleBackToHome}
+              title="点击返回首页"
+            >
+              <div className="flex items-center space-x-1">
+                <h2 className="text-base font-semibold text-gray-800">AI文档助手</h2>
+                <ChevronDown className="w-4 h-4 text-gray-500" />
+              </div>
+            </div>
+
+            {/* 核心内容区 - 根据状态切换 */}
+            {view === 'home' ? (
+              // ================= [ 视图 1：首页默认态 ] =================
+              <div className="flex-1 flex flex-col bg-white">
+                <div className="flex-1 px-6 pt-8 pb-4 overflow-y-auto">
+                  <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                    Hi, 有什么可以帮你?
+                  </h1>
+                  <p className="text-sm text-gray-500 mb-8 flex items-center">
+                    你似乎在浏览<span className="text-gray-800 font-medium mx-1">《Q3产品复盘与Q4...》</span>，我可以帮你
+                  </p>
+
+                  {/* 推荐 Prompt 列表 */}
+                  <div className="space-y-3">
+                    <button className="w-full text-left px-5 py-4 bg-gray-50 hover:bg-gray-100 rounded-2xl text-sm text-gray-700 transition-colors">
+                      根据文档内容提供3个关键洞察
+                    </button>
+                    <button className="w-full text-left px-5 py-4 bg-gray-50 hover:bg-gray-100 rounded-2xl text-sm text-gray-700 transition-colors">
+                      提取文档中的所有核心数据指标
+                    </button>
+                    <button className="w-full text-left px-5 py-4 bg-gray-50 hover:bg-gray-100 rounded-2xl text-sm text-gray-700 transition-colors">
+                      加粗所有提及的海外国家/地区名称
+                    </button>
+                  </div>
+                </div>
+
+                {/* 底部功能区与输入框 */}
+                <div className="px-5 pb-8 pt-2 bg-gradient-to-t from-white via-white to-transparent">
+                  {/* 功能外显区：这里就是你想要的“总结”入口 */}
+                  <div className="flex items-center space-x-3 mb-4 overflow-x-auto pb-1 scrollbar-hide">
+                    <button 
+                      onClick={handleSummarizeClick}
+                      className="flex-shrink-0 flex items-center space-x-1.5 px-4 py-2 bg-white border border-gray-200 shadow-sm rounded-full active:scale-95 transition-transform"
+                    >
+                      <Sparkles className="w-4 h-4 text-blue-600" />
+                      <span className="text-sm font-medium text-gray-700">总结</span>
+                    </button>
+                    <button className="flex-shrink-0 flex items-center space-x-1.5 px-4 py-2 bg-white border border-gray-200 shadow-sm rounded-full active:scale-95 transition-transform">
+                      <ListTodo className="w-4 h-4 text-gray-600" />
+                      <span className="text-sm font-medium text-gray-700">提取待办</span>
+                    </button>
+                  </div>
+
+                  {/* 语音/文本输入框 */}
+                  <div className="flex items-center justify-between bg-white border border-gray-200 shadow-md rounded-full p-2 h-14">
+                    <button className="w-10 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-50 rounded-full transition-colors">
+                      <Keyboard className="w-5 h-5" />
+                    </button>
+                    <div className="flex-1 flex justify-center items-center cursor-pointer text-gray-800 font-medium">
+                      <span className="text-base tracking-widest">按住 说话</span>
+                    </div>
+                    <button className="w-10 h-10 flex items-center justify-center text-gray-500 hover:bg-gray-50 rounded-full transition-colors">
+                      <Plus className="w-6 h-6" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              // ================= [ 视图 2：聊天与摘要卡片态 ] =================
+              <div className="flex-1 flex flex-col bg-gray-50/50 overflow-hidden">
+                <div className="flex-1 overflow-y-auto p-5 space-y-6">
+                  
+                  {/* 用户提问气泡 (模拟点击按钮后自动发送) */}
+                  <div className="flex justify-end animate-in duration-300">
+                    <div className="bg-blue-600 text-white px-4 py-2.5 rounded-2xl rounded-tr-sm max-w-[85%] text-sm shadow-sm">
+                      请帮我总结一下这篇文档。
+                    </div>
+                  </div>
+
+                  {/* AI 回复 - 摘要卡片 */}
+                  <div className="flex flex-col space-y-2 animate-in duration-500 delay-150 fill-mode-both">
+                    <div className="flex items-center space-x-2 text-gray-500 mb-1">
+                      <Sparkles className="w-4 h-4" />
+                      <span className="text-xs font-medium">已为你生成文档结构化摘要：</span>
+                    </div>
+
+                    {/* 卡片主体 */}
+                    <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden group">
+                      
+                      {/* 一句话总结 */}
+                      <div className="bg-blue-50/50 p-4 border-b border-gray-100">
+                        <div className="flex items-center mb-2">
+                          <span className="text-sm font-semibold text-gray-800">一句话总结</span>
+                        </div>
+                        <p className="text-sm text-gray-700 leading-relaxed font-medium">
+                          本文复盘了 Q3 营收超预期的表现，并明确了 Q4 发力海外市场的战略重点。
+                        </p>
+                      </div>
+
+                      <div className="p-4 space-y-5">
+                        {/* 核心要点 */}
+                        <div>
+                          <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+                            <span className="w-1.5 h-4 bg-blue-500 rounded-full mr-2"></span>
+                            核心要点
+                          </h3>
+                          <ul className="space-y-2.5">
+                            <li className="flex items-start text-sm text-gray-600 leading-relaxed">
+                              <span className="mr-2 mt-0.5">📈</span>
+                              <span><strong>营收增长：</strong> Q3 整体营收同比增长 25%，超出原定预期目标。</span>
+                            </li>
+                            <li className="flex items-start text-sm text-gray-600 leading-relaxed">
+                              <span className="mr-2 mt-0.5">⚠️</span>
+                              <span><strong>留存预警：</strong> 新用户次月留存率出现 5% 的轻微下滑，需查明归因。</span>
+                            </li>
+                            <li className="flex items-start text-sm text-gray-600 leading-relaxed">
+                              <span className="mr-2 mt-0.5">🚀</span>
+                              <span><strong>Q4 战略：</strong> 将资源向海外市场倾斜，尤其是东南亚地区的本地化运营。</span>
+                            </li>
+                          </ul>
+                        </div>
+
+                        <div className="w-full h-px bg-gray-100"></div>
+
+                        {/* 下一步行动 */}
+                        <div>
+                          <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
+                            <span className="w-1.5 h-4 bg-orange-500 rounded-full mr-2"></span>
+                            下一步行动
+                          </h3>
+                          <div className="space-y-2 bg-gray-50 rounded-lg p-3 border border-gray-100">
+                            <label className="flex items-start space-x-2 cursor-pointer group/task">
+                              <input type="checkbox" className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                              <span className="text-sm text-gray-600 group-hover/task:text-gray-900 transition-colors">
+                                <strong>数据组：</strong>输出留存率下降归因分析报告。
+                              </span>
+                            </label>
+                            <label className="flex items-start space-x-2 cursor-pointer group/task">
+                              <input type="checkbox" className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                              <span className="text-sm text-gray-600 group-hover/task:text-gray-900 transition-colors">
+                                <strong>市场部：</strong>完成东南亚市场 Q4 投放预算对齐。
+                              </span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 底部操作区 */}
+                      <div className="bg-gray-50/80 px-4 py-3 border-t border-gray-100 flex items-center justify-end space-x-2">
+                        <button 
+                          onClick={handleCopy}
+                          className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-200/50 rounded-md transition-all active:scale-95"
+                        >
+                          {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          <span className={copied ? "text-green-600" : ""}>{copied ? '已复制' : '复制内容'}</span>
+                        </button>
+                        <button 
+                          onClick={handleInsert}
+                          className={`flex items-center space-x-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all active:scale-95 ${
+                            inserted 
+                              ? 'bg-green-50 text-green-700 border border-green-200' 
+                              : 'bg-white text-gray-700 border border-gray-200 shadow-sm hover:bg-gray-50 hover:border-gray-300'
+                          }`}
+                        >
+                          {inserted ? <Check className="w-3.5 h-3.5" /> : <ArrowUpToLine className="w-3.5 h-3.5" />}
+                          <span>{inserted ? '已插入文档' : '插入文档顶部'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 对话态的底部输入框 (常规文本输入) */}
+                <div className="p-4 bg-white border-t border-gray-100">
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      placeholder="继续提问..." 
+                      className="w-full bg-gray-50 border border-gray-200 text-sm rounded-full py-2.5 pl-4 pr-10 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
+                    />
+                    <button className="absolute right-2 top-1.5 p-1 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors">
+                      <ArrowUpToLine className="w-4 h-4 rotate-90" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Home Indicator (iOS底部横条) */}
+            <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-1 bg-gray-300 rounded-full z-20"></div>
+          </div>
+        </div>
+      );
+    }
+
+    const root = createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
